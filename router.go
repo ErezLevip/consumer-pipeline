@@ -10,8 +10,6 @@ type Router struct{
 	registry interface{}
 }
 
-//type MessageHandler  func (ctx *MessageContext)
-
 func (consumer *EventsConsumer) AddRouter() *Router{
 	consumer.router = &Router{
 		 registry: consumer.registry,

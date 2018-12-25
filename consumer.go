@@ -27,12 +27,12 @@ type EventsConsumer struct {
 type MessageHandler func(ctx *MessageContext)
 type ErrorHandler func(err error, ctx context.Context)
 
-func NewConsumer(defaultContext context.Context,logger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}) (Consumer, error) {
+func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}) (Consumer, error) {
 	return &EventsConsumer{
 		ctx:      context.WithValue(defaultContext, "registry", registry),
 		listener: listener,
 		registry: registry,
-		logger:logger,
+		logger:   logger,
 	}, nil
 }
 
@@ -44,7 +44,11 @@ func (e *EventsConsumer) Run(onError ErrorHandler) {
 	go func() {
 		out, errChannel := e.listener.Listen()
 		log.Println("started listening")
-		go e.handleMessages(out)
+
+		for t, c := range out {
+			log.Println("chan", t)
+			e.handleMessages(c)
+		}
 		go e.handleErrors(errChannel, onError)
 	}()
 
@@ -52,12 +56,16 @@ func (e *EventsConsumer) Run(onError ErrorHandler) {
 }
 
 func (e *EventsConsumer) handleMessages(messages chan *types.WrappedEvent) {
-	log.Println("handling messages")
-	for m := range messages {
-				log.Println("chan new message")
-				ctx := NewMessageContext(m.Topic, m.Value, e.ctx, e.logger)
-				e.chainStart(ctx)
-	}
+	go func() {
+		defer close(messages)
+		log.Println("chan new message")
+		for m := range messages {
+			log.Println("chan new message")
+			ctx := NewMessageContext(m.Topic, m.Value, e.ctx, e.logger)
+			e.chainStart(ctx)
+			e.listener.Ack(m)
+		}
+	}()
 }
 
 func (e *EventsConsumer) handleErrors(errChannel chan error, onError ErrorHandler) {
