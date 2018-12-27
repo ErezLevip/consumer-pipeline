@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
 	"io"
+	"io/ioutil"
 )
 
 type MessageContext struct{
@@ -28,18 +29,5 @@ func NewMessageContext(topic string,message io.Reader,consumerCtx context.Contex
 
 func (msgCtx *MessageContext) ReadMessage () ([]byte,error)  {
 	r := bufio.NewReader(msgCtx.Message)
-	var buff = make([]byte,4)
-	message := make([]byte,0)
-	for {
-		n, err := r.Read(buff)
-		if err != nil {
-			if err == io.EOF {
-				message = append(message,buff[:n]...)
-				break
-			}
-
-		}
-		message = append(message,buff...)
-	}
-	return message,nil
+	return ioutil.ReadAll(r)
 }
