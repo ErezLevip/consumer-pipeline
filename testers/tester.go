@@ -26,14 +26,14 @@ func main(){
 		log.Fatal(err)
 	}
 
-	consumer,err := consumer_pipeline.NewConsumer(context.Background(),TestLogger{},listener,nil)
+	consumer,err := consumer_pipeline.NewConsumer(context.Background(),TestLogger{},listener,nil,true)
 	if err != nil{
 		log.Fatal(err)
 	}
 
-	consumer.AddRouter().RegisterEndpoint("comments",handler)
+	consumer.AddRouter().RegisterEndpoint("comments",handler,onError)
 
-	consumer.Run(onError)
+	consumer.Run()
 }
 
 
