@@ -27,6 +27,7 @@ func (r *Router) route() MessageHandler {
 		topic := ctx.ctx.Value("topic").(string)
 		if msgHandler, exists := r.handlers[topic]; exists {
 			log.Println("handler found")
+			ctx.RegisterCurrentHandler(msgHandler)
 			msgHandler(ctx)
 			return
 		}

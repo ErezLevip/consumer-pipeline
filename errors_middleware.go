@@ -1,5 +1,7 @@
 package consumer_pipeline
 
+import "log"
+
 func Errors(next MessageHandler) func(*MessageContext) {
 	return func(ctx *MessageContext) {
 		next(ctx)
@@ -9,11 +11,13 @@ func Errors(next MessageHandler) func(*MessageContext) {
 			return
 		}
 
-		for _,err := range errors.([]*ErrorMetric){
+		currentHandler := ctx.ctx.Value("current_handler").(string)
+		for _, err := range errors.([]*ErrorMetric) {
+			log.Println(err)
 			reporter.Send("errors",
 				1, map[string]string{
 					`context`:  ctx.ctx.Value("topic").(string),
-					`function`: err.Function,
+					`function`: currentHandler,
 				})
 		}
 	}

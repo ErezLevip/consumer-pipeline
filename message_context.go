@@ -6,6 +6,7 @@ import (
 	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
 	"io"
 	"io/ioutil"
+	"reflect"
 )
 
 type MessageContext struct{
@@ -32,7 +33,11 @@ func (msgCtx *MessageContext) ReadMessage () ([]byte,error)  {
 	return ioutil.ReadAll(r)
 }
 
-func Error(ctx context.Context,err ErrorMetric)  {
+func Error(ctx context.Context,err *ErrorMetric)  {
 	errs := ctx.Value("errors")
-	errs = append(errs.([]ErrorMetric),err)
+	errs = append(errs.([]*ErrorMetric),err)
+}
+
+func (mc *MessageContext) RegisterCurrentHandler(handler MessageHandler)  {
+	mc.ctx =  context.WithValue(mc.ctx,"current_handler",reflect.TypeOf(handler).Name())
 }
