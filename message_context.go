@@ -31,3 +31,8 @@ func (msgCtx *MessageContext) ReadMessage () ([]byte,error)  {
 	r := bufio.NewReader(msgCtx.Message)
 	return ioutil.ReadAll(r)
 }
+
+func Error(ctx context.Context,err ErrorMetric)  {
+	errs := ctx.Value("errors")
+	errs = append(errs.([]ErrorMetric),err)
+}

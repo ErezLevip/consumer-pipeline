@@ -29,13 +29,16 @@ type EventsConsumer struct {
 type MessageHandler func(ctx *MessageContext)
 type ErrorHandler func(err error, ctx context.Context)
 
-func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{},commitOnHandlerCompletion bool) (Consumer, error) {
+func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}, commitOnHandlerCompletion bool) (Consumer, error) {
+	ctx := context.WithValue(defaultContext, "registry", registry)
+	ctx = context.WithValue(ctx, "errors", make([]*ErrorMetric, 0))
+
 	return &EventsConsumer{
-		ctx:      context.WithValue(defaultContext, "registry", registry),
-		listener: listener,
-		registry: registry,
-		logger:   logger,
-		commitOnHandlerCompletion:commitOnHandlerCompletion,
+		ctx:                       ctx,
+		listener:                  listener,
+		registry:                  registry,
+		logger:                    logger,
+		commitOnHandlerCompletion: commitOnHandlerCompletion,
 	}, nil
 }
 
@@ -73,7 +76,7 @@ func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
 		ctx := NewMessageContext(m.Topic, m.Value, e.ctx, e.logger)
 		e.chainStart(ctx)
 
-		if e.commitOnHandlerCompletion{
+		if e.commitOnHandlerCompletion {
 			m.Ack()
 		}
 	}
