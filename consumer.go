@@ -7,6 +7,7 @@ import (
 	"github.com/erezlevip/event-listener"
 	"github.com/erezlevip/event-listener/types"
 	"log"
+	"reflect"
 )
 
 type Consumer interface {
@@ -85,6 +86,11 @@ func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
 func (e *EventsConsumer) handleErrors(topic string, errors <-chan error) {
 	log.Println("handling errors")
 	for err := range errors {
+		Error(e.ctx,&ErrorMetric{
+			Context:topic,
+			Function: reflect.TypeOf(e.listener.Listen).Name(),
+		})
+
 		ctx := NewMessageContext(topic, nil, e.ctx, e.logger)
 		e.router.errorHandlers[topic](err, ctx.ctx)
 	}
