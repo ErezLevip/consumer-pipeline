@@ -22,11 +22,9 @@ func (consumer *EventsConsumer) AddRouter() *Router {
 
 func (r *Router) route() MessageHandler {
 	return func(ctx *MessageContext) {
-		log.Println("inbound")
 		log.Println(r.handlers)
 		topic := ctx.ctx.Value("topic").(string)
 		if msgHandler, exists := r.handlers[topic]; exists {
-			log.Println("handler found")
 			ctx.RegisterCurrentHandler(msgHandler)
 			msgHandler(ctx)
 			return
