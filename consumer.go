@@ -71,10 +71,8 @@ func (e *EventsConsumer) Run() {
 }
 
 func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
-	log.Println("chan new message")
 	for m := range messages {
-		log.Println("chan new message")
-		ctx := NewMessageContext(m.Topic, m.Value, e.ctx, e.logger)
+		ctx := NewMessageContext(m.Topic, m, e.ctx, e.logger)
 		e.chainStart(ctx)
 
 		if e.commitOnHandlerCompletion {
@@ -84,7 +82,6 @@ func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
 }
 
 func (e *EventsConsumer) handleErrors(topic string, errors <-chan error) {
-	log.Println("handling errors")
 	for err := range errors {
 		Error(e.ctx,&ErrorMetric{
 			Context:topic,
