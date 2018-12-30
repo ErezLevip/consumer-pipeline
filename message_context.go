@@ -11,20 +11,20 @@ import (
 )
 
 type MessageContext struct {
-	ctx     context.Context
+	Ctx     context.Context
 	Logger  acceptable_interfaces.MetricsLogger
 	Message *types.WrappedEvent
 }
 
 func (mctx *MessageContext) Registry() interface{} {
-	return mctx.ctx.Value("registry")
+	return mctx.Ctx.Value("registry")
 }
 
 func NewMessageContext(topic string, message *types.WrappedEvent, consumerCtx context.Context, logger acceptable_interfaces.MetricsLogger) *MessageContext {
 	ctx := context.WithValue(consumerCtx, "topic", topic)
 	return &MessageContext{
 		Message: message,
-		ctx:     ctx,
+		Ctx:     ctx,
 		Logger:  logger,
 	}
 }
@@ -39,7 +39,7 @@ func (mctx *MessageContext) ReadMessage() ([]byte, error) {
 }
 
 func (mctx *MessageContext) RegisterCurrentHandler(handler MessageHandler) {
-	mctx.ctx = context.WithValue(mctx.ctx, "current_handler", reflect.TypeOf(handler).Name())
+	mctx.Ctx = context.WithValue(mctx.Ctx, "current_handler", reflect.TypeOf(handler).Name())
 }
 
 func Error(ctx context.Context, err *ErrorMetric) {

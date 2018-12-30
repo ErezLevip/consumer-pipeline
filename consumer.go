@@ -89,6 +89,6 @@ func (e *EventsConsumer) handleErrors(topic string, errors <-chan error) {
 		})
 
 		ctx := NewMessageContext(topic, nil, e.ctx, e.logger)
-		e.router.errorHandlers[topic](err, ctx.ctx)
+		e.router.errorHandlers[topic](err, ctx.Ctx)
 	}
 }
