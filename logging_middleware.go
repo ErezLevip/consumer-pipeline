@@ -8,7 +8,7 @@ func Logging(next MessageHandler) func(*MessageContext) {
 	return func(ctx *MessageContext) {
 		startTime := time.Now()
 		reporter := ctx.Logger
-		topic := ctx.ctx.Value("topic").(string)
+		topic := ctx.Ctx.Value("topic").(string)
 		reporter.Send("topic", 1, map[string]string{`name`: topic, `state`: `receive`})
 		next(ctx)
 		reporter.Send("handlers", 1, map[string]string{`name`: topic, `state`: `response`})
