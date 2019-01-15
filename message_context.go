@@ -31,7 +31,7 @@ func NewMessageContext(topic string, message *types.WrappedEvent, consumerCtx co
 
 func (mctx *MessageContext) ReadMessage() ([]byte, error) {
 	if mctx.Message == nil {
-		return nil, errors.New("Message is nil")
+		return nil, errors.New("message is nil")
 	}
 
 	r := bufio.NewReader(mctx.Message.Value)

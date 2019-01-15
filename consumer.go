@@ -50,19 +50,19 @@ func (e *EventsConsumer) Run() {
 
 	go func() {
 		out, errors := e.listener.Listen()
-		log.Println("started listening")
+		log.Println("start listening")
 
 		go func() {
 			for t, c := range out {
-				log.Println(fmt.Sprintf("message on on %s", t))
-				e.handleMessages(c)
+				log.Println(fmt.Sprintf("listening on %s", t))
+				go e.handleMessages(c)
 			}
 		}()
 
 		go func() {
 			for t, err := range errors {
-				log.Println(fmt.Sprintf("error on %s", t))
-				e.handleErrors(t, err)
+				log.Println(fmt.Sprintf("handling errors on %s", t))
+				go e.handleErrors(t, err)
 			}
 		}()
 	}()
