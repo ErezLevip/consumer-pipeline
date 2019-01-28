@@ -11,21 +11,24 @@ import (
 )
 
 type MessageContext struct {
-	Ctx     context.Context
-	Logger  acceptable_interfaces.MetricsLogger
-	Message *types.WrappedEvent
+	Ctx           context.Context
+	MetricsLogger acceptable_interfaces.MetricsLogger
+	Logger        acceptable_interfaces.Logger
+	Message       *types.WrappedEvent
+	ErrorMetric   *ErrorMetric
 }
 
 func (mctx *MessageContext) Registry() interface{} {
 	return mctx.Ctx.Value("registry")
 }
 
-func NewMessageContext(topic string, message *types.WrappedEvent, consumerCtx context.Context, logger acceptable_interfaces.MetricsLogger) *MessageContext {
+func NewMessageContext(topic string, message *types.WrappedEvent, consumerCtx context.Context, metricsLogger acceptable_interfaces.MetricsLogger, logger acceptable_interfaces.Logger) *MessageContext {
 	ctx := context.WithValue(consumerCtx, "topic", topic)
 	return &MessageContext{
-		Message: message,
-		Ctx:     ctx,
-		Logger:  logger,
+		Message:       message,
+		Ctx:           ctx,
+		MetricsLogger: metricsLogger,
+		Logger:        logger,
 	}
 }
 
@@ -42,7 +45,3 @@ func (mctx *MessageContext) RegisterCurrentHandler(handler MessageHandler) {
 	mctx.Ctx = context.WithValue(mctx.Ctx, "current_handler", reflect.TypeOf(handler).Name())
 }
 
-func Error(ctx context.Context, err *ErrorMetric) {
-	errs := ctx.Value("errors")
-	errs = append(errs.([]*ErrorMetric), err)
-}

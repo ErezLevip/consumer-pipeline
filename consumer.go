@@ -6,20 +6,22 @@ import (
 	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
 	"github.com/erezlevip/event-listener"
 	"github.com/erezlevip/event-listener/types"
-	"log"
+	"os"
+	"os/signal"
 	"reflect"
 )
 
 type Consumer interface {
 	Run()
 	AddMiddlewareChain() *MiddlewareWrapper
-	AddRouter() *Router
+	AddRouter(logger acceptable_interfaces.Logger) *Router
 }
 
 type EventsConsumer struct {
 	listener                  event_listener.EventListener
 	ctx                       context.Context
-	logger                    acceptable_interfaces.MetricsLogger
+	metricsLogger             acceptable_interfaces.MetricsLogger
+	logger                    acceptable_interfaces.Logger
 	registry                  interface{}
 	router                    *Router
 	chain                     *MiddlewareWrapper
@@ -28,51 +30,54 @@ type EventsConsumer struct {
 }
 
 type MessageHandler func(ctx *MessageContext)
-type ErrorHandler func(err error, ctx context.Context)
+type ErrorHandler func(ctx *MessageContext)
 
-func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}, commitOnHandlerCompletion bool) (Consumer, error) {
+func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.Logger, metricsLogger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}, commitOnHandlerCompletion bool) (Consumer, error) {
 	ctx := context.WithValue(defaultContext, "registry", registry)
-	ctx = context.WithValue(ctx, "errors", make([]*ErrorMetric, 0))
 
 	return &EventsConsumer{
 		ctx:                       ctx,
 		listener:                  listener,
 		registry:                  registry,
-		logger:                    logger,
+		metricsLogger:             metricsLogger,
 		commitOnHandlerCompletion: commitOnHandlerCompletion,
+		logger:                    logger,
 	}, nil
 }
 
 func (e *EventsConsumer) Run() {
-	infinity := make(chan bool)
 
-	e.chainStart = e.AddMiddlewareChain().Add(Logging).Add(Errors).then(e.router.route())
+	e.chainStart = e.AddMiddlewareChain().Add(Logging).then(e.router.route())
 
 	go func() {
 		out, errors := e.listener.Listen()
-		log.Println("start listening")
+		e.logger.Info("start listening")
 
 		go func() {
 			for t, c := range out {
-				log.Println(fmt.Sprintf("listening on %s", t))
+				e.logger.Info(fmt.Sprintf("listening on %s", t))
 				go e.handleMessages(c)
 			}
 		}()
 
 		go func() {
 			for t, err := range errors {
-				log.Println(fmt.Sprintf("handling errors on %s", t))
+				e.logger.Info(fmt.Sprintf("handling errors on %s", t))
 				go e.handleErrors(t, err)
 			}
 		}()
 	}()
 
-	<-infinity
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop)
+
+	sig := <-stop
+	e.logger.Error(fmt.Sprintf("%v interrupt, sutting down", sig))
 }
 
 func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
 	for m := range messages {
-		ctx := NewMessageContext(m.Topic, m, e.ctx, e.logger)
+		ctx := NewMessageContext(m.Topic, m, e.ctx, e.metricsLogger, e.logger)
 		e.chainStart(ctx)
 
 		if e.commitOnHandlerCompletion {
@@ -83,12 +88,12 @@ func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
 
 func (e *EventsConsumer) handleErrors(topic string, errors <-chan error) {
 	for err := range errors {
-		Error(e.ctx,&ErrorMetric{
-			Context:topic,
+		ctx := NewMessageContext(topic, nil, e.ctx, e.metricsLogger, e.logger)
+		ctx.ErrorMetric = &ErrorMetric{
+			Error:    err,
 			Function: reflect.TypeOf(e.listener.Listen).Name(),
-		})
-
-		ctx := NewMessageContext(topic, nil, e.ctx, e.logger)
-		e.router.errorHandlers[topic](err, ctx.Ctx)
+			Context:  topic,
+		}
+		e.router.errorHandlers[topic](ctx)
 	}
 }
