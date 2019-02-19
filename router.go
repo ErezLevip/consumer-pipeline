@@ -27,7 +27,6 @@ func (consumer *EventsConsumer) AddRouter(logger acceptable_interfaces.Logger) *
 
 func (r *Router) route() MessageHandler {
 	return func(mctx *MessageContext) {
-		log.Println(r.handlers)
 		topic := mctx.Ctx.Value("topic").(string)
 		if msgHandler, exists := r.handlers[topic]; exists {
 			mctx.Ctx = context.WithValue(mctx.Ctx, "function", reflect.TypeOf(msgHandler).Name())
