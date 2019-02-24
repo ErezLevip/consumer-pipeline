@@ -3,7 +3,6 @@ package consumer_pipeline
 import (
 	"context"
 	"fmt"
-	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
 	"log"
 	"reflect"
 )
@@ -12,17 +11,17 @@ type Router struct {
 	handlers      map[string]MessageHandler
 	errorHandlers map[string]ErrorHandler
 	registry      interface{}
-	logger        acceptable_interfaces.Logger
+	logger        Logger
 }
 
-func (consumer *EventsConsumer) AddRouter(logger acceptable_interfaces.Logger) *Router {
-	consumer.router = &Router{
-		registry:      consumer.registry,
+func (ec *EventsConsumer) AddRouter(logger Logger) *Router {
+	ec.router = &Router{
+		registry:      ec.registry,
 		handlers:      make(map[string]MessageHandler),
 		errorHandlers: make(map[string]ErrorHandler),
 		logger:        logger,
 	}
-	return consumer.router
+	return ec.router
 }
 
 func (r *Router) route() MessageHandler {

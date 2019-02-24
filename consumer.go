@@ -3,9 +3,7 @@ package consumer_pipeline
 import (
 	"context"
 	"fmt"
-	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
 	"github.com/erezlevip/event-listener"
-	"github.com/erezlevip/event-listener/types"
 	"os"
 	"os/signal"
 	"reflect"
@@ -14,14 +12,14 @@ import (
 type Consumer interface {
 	Run()
 	AddMiddlewareChain() *MiddlewareWrapper
-	AddRouter(logger acceptable_interfaces.Logger) *Router
+	AddRouter(logger Logger) *Router
 }
 
 type EventsConsumer struct {
 	listener                  event_listener.EventListener
 	ctx                       context.Context
-	metricsLogger             acceptable_interfaces.MetricsLogger
-	logger                    acceptable_interfaces.Logger
+	metricsLogger             MetricsLogger
+	logger                    Logger
 	registry                  interface{}
 	router                    *Router
 	chain                     *MiddlewareWrapper
@@ -32,7 +30,7 @@ type EventsConsumer struct {
 type MessageHandler func(ctx *MessageContext)
 type ErrorHandler func(ctx *MessageContext)
 
-func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.Logger, metricsLogger acceptable_interfaces.MetricsLogger, listener event_listener.EventListener, registry interface{}, commitOnHandlerCompletion bool) (Consumer, error) {
+func NewConsumer(defaultContext context.Context, logger Logger, metricsLogger MetricsLogger, listener event_listener.EventListener, registry interface{}, commitOnHandlerCompletion bool) (Consumer, error) {
 	ctx := context.WithValue(defaultContext, "registry", registry)
 
 	return &EventsConsumer{
@@ -45,25 +43,29 @@ func NewConsumer(defaultContext context.Context, logger acceptable_interfaces.Lo
 	}, nil
 }
 
-func (e *EventsConsumer) Run() {
+func (ec *EventsConsumer) Run() {
 
-	e.chainStart = e.AddMiddlewareChain().Add(Logging).then(e.router.route())
+	ec.chainStart = ec.AddMiddlewareChain().Add(Logging).then(ec.router.route())
+
+	out, errors, err := ec.listener.Listen()
+	if err != nil {
+		ec.logger.Error(err)
+		return
+	}
 
 	go func() {
-		out, errors := e.listener.Listen()
-		e.logger.Info("start listening")
-
+		ec.logger.Info("start listening")
 		go func() {
 			for t, c := range out {
-				e.logger.Info(fmt.Sprintf("listening on %s", t))
-				go e.handleMessages(c)
+				ec.logger.Info(fmt.Sprintf("listening on %s", t))
+				go ec.handleMessages(c)
 			}
 		}()
 
 		go func() {
 			for t, err := range errors {
-				e.logger.Info(fmt.Sprintf("handling errors on %s", t))
-				go e.handleErrors(t, err)
+				ec.logger.Info(fmt.Sprintf("handling errors on %s", t))
+				go ec.handleErrors(t, err)
 			}
 		}()
 	}()
@@ -72,28 +74,31 @@ func (e *EventsConsumer) Run() {
 	signal.Notify(stop)
 
 	sig := <-stop
-	e.logger.Error(fmt.Sprintf("%v interrupt, sutting down", sig))
+	ec.logger.Error(fmt.Sprintf("%v interrupt, sutting down", sig))
 }
 
-func (e *EventsConsumer) handleMessages(messages <-chan *types.WrappedEvent) {
+func (ec *EventsConsumer) handleMessages(messages <-chan *event_listener.WrappedEvent) {
 	for m := range messages {
-		ctx := NewMessageContext(m.Topic, m, e.ctx, e.metricsLogger, e.logger)
-		e.chainStart(ctx)
+		ctx := NewMessageContext(m.Topic, m, ec.ctx, ec.metricsLogger, ec.logger)
+		ec.chainStart(ctx)
 
-		if e.commitOnHandlerCompletion {
-			m.Ack()
+		if ec.commitOnHandlerCompletion {
+			err := m.Ack()
+			if err != nil {
+				ec.logger.Error(err)
+			}
 		}
 	}
 }
 
-func (e *EventsConsumer) handleErrors(topic string, errors <-chan error) {
+func (ec *EventsConsumer) handleErrors(topic string, errors <-chan error) {
 	for err := range errors {
-		ctx := NewMessageContext(topic, nil, e.ctx, e.metricsLogger, e.logger)
+		ctx := NewMessageContext(topic, nil, ec.ctx, ec.metricsLogger, ec.logger)
 		ctx.ErrorMetric = &ErrorMetric{
 			Error:    err,
-			Function: reflect.TypeOf(e.listener.Listen).Name(),
+			Function: reflect.TypeOf(ec.listener.Listen).Name(),
 			Context:  topic,
 		}
-		e.router.errorHandlers[topic](ctx)
+		ec.router.errorHandlers[topic](ctx)
 	}
 }

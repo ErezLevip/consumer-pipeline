@@ -24,6 +24,6 @@ func Errors(next MessageHandler) func(*MessageContext) {
 				`function`: function,
 			})
 
-		mctx.Logger.Error(mctx.ErrorMetric, "context", context, "function", function)
+		mctx.Logger.Error(mctx.ErrorMetric.Error, "context", context, "function", function)
 	}
 }

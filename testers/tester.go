@@ -1,5 +1,5 @@
 package main
-
+/*
 import (
 	"bytes"
 	"context"
@@ -67,4 +67,4 @@ func (TestLogger) Metric(name string, val float64, tags map[string]string)  {
 
 func (TestLogger) Send(name string, val int64, tags map[string]string, args ...int) {
 	log.Println(name,val,tags,args)
-}
+}*/

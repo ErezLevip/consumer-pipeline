@@ -1,4 +1,4 @@
-package acceptable_interfaces
+package consumer_pipeline
 
 type Logger interface{
 	Debug(args ...interface{})

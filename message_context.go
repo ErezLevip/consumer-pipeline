@@ -3,8 +3,7 @@ package consumer_pipeline
 import (
 	"bufio"
 	"context"
-	"github.com/erezlevip/consumer-pipeline/acceptable_interfaces"
-	"github.com/erezlevip/event-listener/types"
+	"github.com/erezlevip/event-listener"
 	"github.com/influxdata/platform/kit/errors"
 	"io/ioutil"
 	"reflect"
@@ -12,9 +11,9 @@ import (
 
 type MessageContext struct {
 	Ctx           context.Context
-	MetricsLogger acceptable_interfaces.MetricsLogger
-	Logger        acceptable_interfaces.Logger
-	Message       *types.WrappedEvent
+	MetricsLogger MetricsLogger
+	Logger        Logger
+	Message       *event_listener.WrappedEvent
 	ErrorMetric   *ErrorMetric
 }
 
@@ -22,7 +21,7 @@ func (mctx *MessageContext) Registry() interface{} {
 	return mctx.Ctx.Value("registry")
 }
 
-func NewMessageContext(topic string, message *types.WrappedEvent, consumerCtx context.Context, metricsLogger acceptable_interfaces.MetricsLogger, logger acceptable_interfaces.Logger) *MessageContext {
+func NewMessageContext(topic string, message *event_listener.WrappedEvent, consumerCtx context.Context, metricsLogger MetricsLogger, logger Logger) *MessageContext {
 	ctx := context.WithValue(consumerCtx, "topic", topic)
 	return &MessageContext{
 		Message:       message,

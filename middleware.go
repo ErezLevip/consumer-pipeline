@@ -4,13 +4,13 @@ type MiddlewareWrapper struct {
 	chain []Middleware
 }
 
-func (srv *EventsConsumer)AddMiddlewareChain() *MiddlewareWrapper {
-	if srv.chain == nil {
-		srv.chain = &MiddlewareWrapper{
+func (ec *EventsConsumer)AddMiddlewareChain() *MiddlewareWrapper {
+	if ec.chain == nil {
+		ec.chain = &MiddlewareWrapper{
 			chain: make([]Middleware, 0),
 		}
 	}
-	return srv.chain
+	return ec.chain
 }
 
 
