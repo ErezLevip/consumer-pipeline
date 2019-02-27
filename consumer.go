@@ -83,10 +83,7 @@ func (ec *EventsConsumer) handleMessages(messages <-chan *event_listener.Wrapped
 		ec.chainStart(ctx)
 
 		if ec.commitOnHandlerCompletion {
-			err := m.Ack()
-			if err != nil {
-				ec.logger.Error(err)
-			}
+			m.Ack()
 		}
 	}
 }
